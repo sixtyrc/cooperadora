@@ -1,0 +1,58 @@
+name: 🚀 Deploy a Producción
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    name: Deploy en Windows Server
+    runs-on: self-hosted
+
+    steps:
+      - name: 📥 Obtener último código
+        uses: actions/checkout@v4
+
+      - name: 🐍 Deploy Backend
+        working-directory: C:\www\cooperadora\backend
+        shell: powershell
+        run: |
+          Write-Host "→ Instalando dependencias..."
+          .\venv\Scripts\python.exe -m pip install -r requirements.txt --quiet
+
+          Write-Host "→ Aplicando migraciones..."
+          .\venv\Scripts\python.exe manage.py migrate --noinput
+
+          Write-Host "→ Colectando estáticos..."
+          .\venv\Scripts\python.exe manage.py collectstatic --noinput
+
+          Write-Host "→ Reiniciando servicio..."
+          nssm restart cooperadora-backend
+
+      - name: ⚛️ Build Frontend
+        working-directory: C:\www\cooperadora\frontend
+        shell: powershell
+        run: |
+          Write-Host "→ Instalando dependencias..."
+          pnpm install --frozen-lockfile
+
+          Write-Host "→ Compilando frontend..."
+          pnpm build
+
+      - name: ✅ Health Check
+        shell: powershell
+        run: |
+          Start-Sleep -Seconds 8
+          try {
+            $r = Invoke-WebRequest -Uri "http://localhost:8001/api/institution" -UseBasicParsing
+            if ($r.StatusCode -eq 200) {
+              Write-Host "✅ Servicio OK (HTTP $($r.StatusCode))"
+            } else {
+              Write-Error "❌ Respuesta inesperada: $($r.StatusCode)"
+              exit 1
+            }
+          } catch {
+            Write-Error "❌ El servicio no responde: $_"
+            exit 1
+          }

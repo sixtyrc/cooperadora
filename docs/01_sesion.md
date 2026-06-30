@@ -27,7 +27,7 @@
 | 8 - Entregas | ✅ Completada | `fase_8.md` |
 | 9 - Reportes | ✅ Completada | `fase_9.md` |
 | 10 - Frontend Público | ✅ Completada | `fase_10.md` |
-| 11 - Backoffice | ⏳ Pendiente | — |
+| 11 - Backoffice | ✅ Completada | `fase_11.md` |
 | 12 - Producción | ⏳ Pendiente | — |
 
 ---
@@ -78,6 +78,9 @@ backend/
 | GET/PATCH | `/api/admin/payments/<id>` | Auth | Verificar/rechazar pago |
 | GET/POST | `/api/admin/deliveries` | Admin/Operador | Registrar/listar entregas |
 | GET/PUT | `/api/admin/deliveries/<id>` | Admin/Operador | Detalle de entrega |
+| GET/POST | `/api/admin/users` | Admin | Listar/crear usuarios |
+| GET/PUT/PATCH/DELETE | `/api/admin/users/<id>` | Admin | Gestión de usuario |
+| GET | `/api/admin/audit` | Admin | Logs de auditoría |
 | GET | `/api/reports/dashboard` | Admin/Operador | Dashboard métricas |
 | GET | `/api/reports/campaigns` | Admin/Operador | Reporte por campaña |
 | GET | `/api/reports/products` | Admin/Operador | Reporte por producto |
@@ -143,5 +146,4 @@ backend/
 
 ## PRÓXIMOS PASOS
 
-- **Fase 11:** Backoffice (React).
 - **Fase 12:** Producción (Caddy + NSSM + Waitress).

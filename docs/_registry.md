@@ -12,5 +12,5 @@
 | Fase 8 - Entregas | Completada | 2026-06-30 | `/docs/fase_8.md` |
 | Fase 9 - Reportes | Completada | 2026-06-30 | `/docs/fase_9.md` |
 | Fase 10 - Frontend Público | Completada | 2026-06-30 | `/docs/fase_10.md` |
-| Fase 11 - Backoffice | Pendiente | | |
+| Fase 11 - Backoffice | Completada | 2026-06-30 | `/docs/fase_11.md` |
 | Fase 12 - Producción | Pendiente | | |
