@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.throttling import ScopedRateThrottle
 from orders.models import Order
 from .models import Payment
 from .serializers import PaymentSerializer, PaymentAdminSerializer
@@ -50,12 +51,15 @@ class PaymentAdminListView(generics.ListAPIView):
     def get_queryset(self):
         qs = Payment.objects.select_related('order').order_by('-created_at')
         status_filter = self.request.query_params.get('status')
+        reconciliation = self.request.query_params.get('reconciliation')
         campaign = self.request.query_params.get('campaign')
         date_from = _parse_date(self.request.query_params.get('date_from'))
         date_to = _parse_date(self.request.query_params.get('date_to'))
 
         if status_filter:
             qs = qs.filter(status=status_filter)
+        if reconciliation:
+            qs = qs.filter(reconciliation_status=reconciliation)
         if campaign:
             qs = qs.filter(order__campaign__slug=campaign)
         if date_from:
@@ -88,7 +92,7 @@ class PaymentAdminDetailView(generics.RetrieveUpdateAPIView):
 
 class PaymentPdfView(generics.GenericAPIView):
     """GET /api/payments/<id>/pdf — descargar comprobante de carga de pago."""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Payment.objects.select_related('order')
 
     def get(self, request, pk):
@@ -107,13 +111,17 @@ class PaymentOcrView(generics.GenericAPIView):
     """POST /api/payments/ocr — lee datos de un comprobante bancario con OCR."""
     permission_classes = [permissions.AllowAny]
     parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'ocr'
 
     def post(self, request):
         file = request.FILES.get('voucher')
         if not file:
             return Response({'detail': 'Adjuntá un archivo (jpg, png).'}, status=400)
+        if file.size > 5 * 1024 * 1024:
+            return Response({'detail': 'El archivo supera los 5 MB.'}, status=400)
         try:
             data = extract_voucher_data(file)
-        except Exception as e:
-            return Response({'detail': f'Error al procesar imagen: {str(e)}'}, status=400)
+        except Exception:
+            return Response({'detail': 'No se pudo leer el comprobante.'}, status=400)
         return Response(data)

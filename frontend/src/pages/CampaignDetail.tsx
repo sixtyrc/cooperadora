@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import type { Campaign, Product } from '../types'
+import { mediaUrl } from '../api/media'
 
 export default function CampaignDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -82,7 +83,7 @@ export default function CampaignDetail() {
                     {p.image ? (
                       <div className="aspect-square overflow-hidden">
                         <img
-                          src={`${import.meta.env.VITE_API_URL || ''}${p.image}`}
+                          src={mediaUrl(p.image)}
                           alt={p.name}
                           className="w-full h-full object-cover"
                         />

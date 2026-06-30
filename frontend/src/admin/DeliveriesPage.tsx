@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { api } from '../api/client'
 import type { DeliveryCheck, Campaign } from '../types'
 
@@ -10,7 +10,7 @@ export default function DeliveriesPage() {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState<number | null>(null)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     const camps = await api.getAdminCampaigns()
     setCampaigns(camps)
@@ -20,9 +20,9 @@ export default function DeliveriesPage() {
       if (active) setCampaign(active.slug)
     }
     setLoading(false)
-  }
+  }, [campaign])
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { loadData() }, [loadData])
 
   useEffect(() => {
     if (!campaign) return

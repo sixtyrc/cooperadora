@@ -8,7 +8,7 @@
 
 - **OS:** Windows Server
 - **Ruta del proyecto:** `C:\www\cooperadora`
-- **Puerto Django:** `8001` (Waitress)
+- **Puerto Django:** `8004` (Waitress; 8000–8003 ya están ocupados por otros sistemas)
 - **Proxy:** Caddy (HTTPS automático)
 - **Servicios:** NSSM
 
@@ -47,12 +47,15 @@ Crear `C:\www\cooperadora\backend\.env`:
 ```env
 SECRET_KEY=clave-secreta-larga-y-aleatoria
 DEBUG=False
-ALLOWED_HOSTS=tu-dominio.com,localhost
+ALLOWED_HOSTS=cooperadora.ctsoft.com.ar,localhost,127.0.0.1
 
 DATABASE_URL=postgresql://cooperadora_user:clave_segura@localhost:5432/cooperadora_db
 
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
+SECURE_SSL_REDIRECT=True
+CSRF_TRUSTED_ORIGINS=https://cooperadora.ctsoft.com.ar
+CORS_ALLOWED_ORIGINS=https://cooperadora.ctsoft.com.ar
 ```
 
 > ⚠️ El archivo `.env` NUNCA debe subirse al repositorio. Está en `.gitignore`.
@@ -72,7 +75,7 @@ cd C:\www\cooperadora\backend
 nssm install cooperadora-backend
 # Configurar en el editor:
 #   Path:        C:\www\cooperadora\backend\venv\Scripts\python.exe
-#   Arguments:   -m waitress --port=8001 --threads=4 cooperadora.wsgi:application
+#   Arguments:   -m waitress --listen=127.0.0.1:8004 --threads=4 cooperadora.wsgi:application
 #   Startup dir: C:\www\cooperadora\backend
 
 nssm start cooperadora-backend
@@ -83,20 +86,34 @@ nssm start cooperadora-backend
 Agregar al `Caddyfile` existente:
 
 ```caddy
-tu-dominio.com {
+cooperadora.ctsoft.com.ar {
+    encode gzip
+
     handle /api/* {
-        reverse_proxy localhost:8001
+        reverse_proxy 127.0.0.1:8004 {
+            header_up X-Forwarded-Proto {scheme}
+        }
     }
 
-    handle /media/* {
-        root * C:\www\cooperadora\backend
+    handle_path /static/* {
+        root * "C:/www/cooperadora/backend/staticfiles"
+        file_server
+    }
+
+    handle_path /media/* {
+        root * "C:/www/cooperadora/backend/media"
         file_server
     }
 
     handle {
-        root * C:\www\cooperadora\frontend\dist
+        root * "C:/www/cooperadora/frontend/dist"
         try_files {path} /index.html
         file_server
+    }
+
+    log {
+        output file C:\caddy\logs\cooperadora.log
+        level INFO
     }
 }
 ```
@@ -104,6 +121,23 @@ tu-dominio.com {
 ```powershell
 caddy reload --config C:\ruta\Caddyfile
 ```
+
+> No agregar un `handle /admin/*`: el backoffice React usa rutas `/admin` y debe
+> caer en el `handle` del frontend. Toda su comunicación backend utiliza `/api`.
+
+### 7.1 Configurar Cloudflare
+
+En **DNS → Records**:
+
+- Tipo: `A`
+- Nombre: `cooperadora`
+- Contenido: IP pública del servidor
+- Proxy: activado (nube naranja)
+- TTL: Auto
+
+En **SSL/TLS** seleccionar `Full (strict)`. Los puertos públicos necesarios son
+`80` y `443`; el `8004` queda escuchando sólo en `127.0.0.1` y no debe abrirse
+en el firewall.
 
 ### 8. Build inicial del frontend
 
@@ -138,6 +172,10 @@ git push origin production
 
 El archivo `.github/workflows/deploy.yml` ya está en el repositorio.
 
+Antes de publicar, el workflow ejecuta checks y tests del backend, build y lint del
+frontend. Sólo después copia la versión validada a `C:\www\cooperadora`, aplica
+migraciones, recolecta estáticos y reinicia el servicio.
+
 ### Flujo de deploy
 
 ```
@@ -151,7 +189,7 @@ pip install + migrate + collectstatic + nssm restart
        ↓
 pnpm install + pnpm build
        ↓
-Health check en localhost:8001
+Health check en localhost:8004
        ↓
 ✅ Deploy completado
 ```
@@ -186,7 +224,7 @@ En **GitHub → Settings → Branches → Add branch protection rule**:
 - [ ] Crear DB PostgreSQL y usuario
 - [ ] Crear archivo `.env` con variables de producción
 - [ ] Ejecutar `migrate` + `collectstatic` + `createsuperuser`
-- [ ] Crear servicio NSSM `cooperadora-backend` en puerto `8001`
+- [ ] Crear servicio NSSM `cooperadora-backend` en puerto `8004`
 - [ ] Configurar Caddy y recargar
 - [ ] Build inicial del frontend (`pnpm build`)
 - [ ] Instalar Self-Hosted Runner de GitHub como servicio Windows

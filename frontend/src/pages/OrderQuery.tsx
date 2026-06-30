@@ -16,20 +16,24 @@ const PAYABLE_STATUSES = ['pendiente', 'pendiente_pago']
 export default function OrderQuery() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [code, setCode] = useState(searchParams.get('code') || '')
+  const [phone, setPhone] = useState(searchParams.get('phone') || '')
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const search = async (c?: string) => {
     const queryCode = c || code
-    if (!queryCode.trim()) return
+    if (!queryCode.trim() || !phone.trim()) {
+      setError('Ingresá el código y el mismo teléfono usado en el pedido.')
+      return
+    }
     setLoading(true)
     setError('')
     setOrder(null)
     try {
-      const res = await api.getOrder(queryCode.trim())
+      const res = await api.getOrder(queryCode.trim(), phone.trim())
       setOrder(res)
-      setSearchParams({ code: queryCode.trim() })
+      setSearchParams({ code: queryCode.trim(), phone: phone.trim() })
     } catch {
       setError('No se encontró un pedido con ese código.')
     } finally {
@@ -54,15 +58,19 @@ export default function OrderQuery() {
 
       <form
         onSubmit={e => { e.preventDefault(); search() }}
-        className="flex gap-3 mb-8"
+        className="space-y-3 mb-8"
       >
         <input
           type="text"
           value={code}
           onChange={e => setCode(e.target.value)}
-          placeholder="Ej: PZA-2026-000001"
-          className="flex-1 px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
+          placeholder="Código, por ejemplo COOP-2026-000001"
+          className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
         />
+        <input type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10}
+          value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+          placeholder="Teléfono, por ejemplo 3624617500"
+          className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm" />
         <button
           type="submit"
           disabled={loading}
@@ -140,14 +148,14 @@ export default function OrderQuery() {
           <div className="mt-4 flex flex-col gap-2">
             {PAYABLE_STATUSES.includes(order.status) && (
               <Link
-                to={`/pagar/${order.code}`}
+                to={`/pagar/${order.code}?phone=${encodeURIComponent(phone)}`}
                 className="block w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-colors text-center"
               >
                 Registrar pago
               </Link>
             )}
             <a
-              href={api.getOrderPdfUrl(order.code)}
+              href={api.getOrderPdfUrl(order.code, phone)}
               download
               className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors text-center"
             >

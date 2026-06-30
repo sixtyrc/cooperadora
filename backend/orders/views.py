@@ -33,6 +33,15 @@ class OrderQueryView(generics.RetrieveAPIView):
     lookup_field = 'code'
     queryset = Order.objects.prefetch_related('items__product')
 
+    def get_object(self):
+        order = super().get_object()
+        phone = ''.join(filter(str.isdigit, self.request.query_params.get('phone', '')))
+        stored_phone = ''.join(filter(str.isdigit, order.phone))
+        if len(phone) < 6 or phone != stored_phone:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Pedido no encontrado. Revisá el código y el teléfono.')
+        return order
+
 
 def _parse_date(value):
     if not value:
@@ -94,6 +103,9 @@ class OrderPdfView(APIView):
             order = Order.objects.prefetch_related('items__product').get(code=code)
         except Order.DoesNotExist:
             return Response({'detail': 'Pedido no encontrado'}, status=404)
+        phone = ''.join(filter(str.isdigit, request.query_params.get('phone', '')))
+        if len(phone) < 6 or phone != ''.join(filter(str.isdigit, order.phone)):
+            return Response({'detail': 'Pedido no encontrado'}, status=404)
         buf = generate_order_pdf(order)
         response = HttpResponse(buf, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{order.code}.pdf"'
@@ -123,6 +135,8 @@ class OrderDeliveryCheckView(APIView):
             order = Order.objects.get(pk=order_id)
         except Order.DoesNotExist:
             return Response({'detail': 'Pedido no encontrado'}, status=404)
+        if order.status not in [Order.STATUS_PAID, Order.STATUS_DELIVERED]:
+            return Response({'detail': 'Solo se pueden entregar pedidos pagados.'}, status=400)
 
         from deliveries.models import Delivery
         delivery_exists = Delivery.objects.filter(order=order).exists()

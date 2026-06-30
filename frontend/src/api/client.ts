@@ -33,10 +33,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   getInstitution: () => request<import('../types').Institution>('/institution'),
-  updateInstitution: (data: Partial<import('../types').Institution>) =>
+  updateInstitution: (data: FormData) =>
     request<import('../types').Institution>('/institution', {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: data,
     }),
   getCampaigns: () => request<import('../types').Campaign[]>('/campaigns'),
   getCampaign: (slug: string) => request<import('../types').Campaign>(`/campaigns/${slug}`),
@@ -46,9 +46,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  getOrder: (code: string) => request<import('../types').Order>(`/orders/${code}`),
+  getOrder: (code: string, phone: string) =>
+    request<import('../types').Order>(`/orders/${encodeURIComponent(code)}?phone=${encodeURIComponent(phone)}`),
 
-  getOrderPdfUrl: (code: string) => `${BASE}/orders/${code}/pdf`,
+  getOrderPdfUrl: (code: string, phone: string) =>
+    `${BASE}/orders/${encodeURIComponent(code)}/pdf?phone=${encodeURIComponent(phone)}`,
 
   getPaymentPdfUrl: (id: number) => `${BASE}/payments/${id}/pdf`,
 
@@ -70,10 +72,11 @@ export const api = {
     })
   },
 
-  createPayment: async (data: { order: number; method: string; voucher?: File; ocr?: Record<string, string | number | null> }) => {
+  createPayment: async (data: { order: number; phone: string; method: string; voucher?: File; ocr?: Record<string, string | number | null> }) => {
     const token = await fetchCsrfToken()
     const fd = new FormData()
     fd.append('order', String(data.order))
+    fd.append('phone', data.phone)
     fd.append('method', data.method)
     if (data.voucher) fd.append('voucher', data.voucher)
     if (data.ocr) {
@@ -153,9 +156,10 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  getAdminPayments: (filters?: { status?: string; campaign?: string; date_from?: string; date_to?: string }) => {
+  getAdminPayments: (filters?: { status?: string; reconciliation?: string; campaign?: string; date_from?: string; date_to?: string }) => {
     const params = new URLSearchParams()
     if (filters?.status) params.set('status', filters.status)
+    if (filters?.reconciliation) params.set('reconciliation', filters.reconciliation)
     if (filters?.campaign) params.set('campaign', filters.campaign)
     if (filters?.date_from) params.set('date_from', filters.date_from)
     if (filters?.date_to) params.set('date_to', filters.date_to)

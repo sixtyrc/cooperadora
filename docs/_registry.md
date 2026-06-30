@@ -13,7 +13,7 @@
 | Fase 9 - Reportes | Completada | 2026-06-30 | `/docs/fase_9.md` |
 | Fase 10 - Frontend Público | Completada | 2026-06-30 | `/docs/fase_10.md` |
 | Fase 11 - Backoffice | Completada | 2026-06-30 | `/docs/fase_11.md` |
-| Fase 12 - Producción | Pendiente | | |
+| Fase 12 - Producción | Configurada; pendiente validar en servidor | 2026-06-30 | `/docs/produccion_cicd.md` |
 | Código pedido PZA → COOP-YYYY | Completada | 2026-06-30 | `01_sesion.md` |
 | PDF descargable de pedido | Completada | 2026-06-30 | `01_sesion.md` |
 | PDF comprobante de pago | Completada | 2026-06-30 | `01_sesion.md` |
@@ -23,3 +23,6 @@
 | Auditoría completa (acciones admin) | Completada | 2026-06-30 | `01_sesion.md` |
 | Entregas redesign (checklist toggle) | Completada | 2026-06-30 | `01_sesion.md` |
 | "Verificando Pago" rename | Completada | 2026-06-30 | `01_sesion.md` |
+| Revisión general, seguridad y UX pública | Completada | 2026-06-30 | `/docs/revision_general_2026-06-30.md` |
+| Configuración institucional visible | Completada | 2026-06-30 | `/docs/revision_general_2026-06-30.md` |
+| Conciliación y duplicados de pagos | Completada | 2026-06-30 | `/docs/revision_general_2026-06-30.md` |

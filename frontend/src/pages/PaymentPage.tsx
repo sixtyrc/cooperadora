@@ -1,24 +1,24 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { api } from '../api/client'
 
 export default function PaymentPage() {
   const { code } = useParams<{ code: string }>()
+  const [searchParams] = useSearchParams()
+  const [phone, setPhone] = useState(searchParams.get('phone') || '')
   const [method, setMethod] = useState('transferencia')
   const [voucher, setVoucher] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [paymentId, setPaymentId] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrResult, setOcrResult] = useState<Record<string, string | number | null> | null>(null)
 
-  const handleOcr = async () => {
-    if (!voucher) return
+  const handleOcr = async (file: File) => {
     setOcrLoading(true)
     setOcrResult(null)
     try {
-      const data = await api.ocrVoucher(voucher)
+      const data = await api.ocrVoucher(file)
       setOcrResult(data)
     } catch {
       setOcrResult({ raw_text: 'No se pudo leer el comprobante' })
@@ -34,14 +34,15 @@ export default function PaymentPage() {
     setError('')
     setSuccess(false)
     try {
-      const order = await api.getOrder(code)
+      const order = await api.getOrder(code, phone)
       const res = await api.createPayment({
         order: order.id,
+        phone,
         method,
         voucher: method === 'transferencia' ? voucher || undefined : undefined,
         ocr: ocrResult || undefined,
       })
-      setPaymentId(res.id)
+      void res
       setSuccess(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al registrar pago')
@@ -63,18 +64,9 @@ export default function PaymentPage() {
             : 'Tu comprobante fue enviado correctamente. Será verificado por un administrador.'}
         </p>
         <div className="flex flex-col gap-3">
-          <Link to={`/consultar?code=${code}`} className="inline-block bg-primary hover:bg-primary-dark text-white font-bold px-6 py-3 rounded-2xl transition-colors">
+          <Link to={`/consultar?code=${code}&phone=${encodeURIComponent(phone)}`} className="inline-block bg-primary hover:bg-primary-dark text-white font-bold px-6 py-3 rounded-2xl transition-colors">
             Consultar pedido
           </Link>
-          {paymentId && (
-            <a
-              href={api.getPaymentPdfUrl(paymentId)}
-              download
-              className="inline-block bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-6 py-3 rounded-2xl transition-colors"
-            >
-              Descargar comprobante
-            </a>
-          )}
         </div>
       </div>
     )
@@ -86,6 +78,13 @@ export default function PaymentPage() {
       <p className="text-center text-gray-500 text-sm mb-6">Pedido: <span className="font-mono font-medium">{code}</span></p>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-md p-6 space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tu teléfono</label>
+          <input type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10}
+            required value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            placeholder="Ej: 3624617500"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200" />
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Método de pago</label>
           <div className="flex gap-3">
@@ -121,22 +120,19 @@ export default function PaymentPage() {
               type="file"
               accept=".jpg,.jpeg,.png"
               onChange={e => {
-                setVoucher(e.target.files?.[0] || null)
+                const file = e.target.files?.[0] || null
+                setVoucher(file)
                 setOcrResult(null)
+                if (file) void handleOcr(file)
               }}
               className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
               required
             />
             <p className="text-xs text-gray-400 mt-1">JPG o PNG — máx. 5 MB</p>
-            {voucher && (
-              <button
-                type="button"
-                onClick={handleOcr}
-                disabled={ocrLoading}
-                className="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-xl text-sm transition-colors disabled:opacity-50"
-              >
-                {ocrLoading ? 'Leyendo...' : 'Leer datos del comprobante'}
-              </button>
+            {ocrLoading && (
+              <div className="mt-2 w-full bg-gray-100 text-gray-600 font-medium py-2 rounded-xl text-sm text-center">
+                Leyendo comprobante automáticamente...
+              </div>
             )}
             {ocrResult && (
               <div className="mt-3 bg-blue-50 rounded-xl p-3 text-sm space-y-1">
@@ -177,7 +173,7 @@ export default function PaymentPage() {
       </form>
 
       <div className="mt-6 text-center">
-        <Link to={`/consultar?code=${code}`} className="text-sm text-gray-400 hover:text-gray-600">
+        <Link to={`/consultar?code=${code}&phone=${encodeURIComponent(phone)}`} className="text-sm text-gray-400 hover:text-gray-600">
           &larr; Volver al pedido
         </Link>
       </div>

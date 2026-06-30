@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import type { Institution, Campaign } from '../types'
+import type { Campaign } from '../types'
 import CampaignCard from '../components/CampaignCard'
+import { useInstitution } from '../context/useInstitution'
+import { mediaUrl } from '../api/media'
 
 export default function Home() {
-  const [institution, setInstitution] = useState<Institution | null>(null)
+  const { institution } = useInstitution()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([api.getInstitution(), api.getCampaigns()])
-      .then(([inst, camps]) => {
-        setInstitution(inst)
+    api.getCampaigns()
+      .then(camps => {
         setCampaigns(camps.filter(c => c.is_visible))
       })
       .finally(() => setLoading(false))
@@ -33,7 +34,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto text-center">
           {institution?.logo ? (
             <img
-              src={`${import.meta.env.VITE_API_URL || ''}${institution.logo}`}
+              src={mediaUrl(institution.logo)}
               alt={institution.name}
               className="h-20 mx-auto mb-6 rounded-2xl object-contain bg-white p-2"
             />

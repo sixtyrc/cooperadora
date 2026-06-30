@@ -22,6 +22,10 @@ class DeliveryAdminListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
+        order = serializer.validated_data['order']
+        if order.status != order.STATUS_PAID:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'order': 'Solo se pueden entregar pedidos pagados.'})
         delivery = serializer.save(user=self.request.user)
         log_action(self.request.user, 'entrega_registrada',
                    f'Entregó pedido {delivery.order.code} a {delivery.order.customer_name}',

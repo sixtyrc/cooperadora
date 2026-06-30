@@ -1,4 +1,5 @@
 import type { Product } from '../types'
+import { mediaUrl } from '../api/media'
 
 interface Props {
   product: Product
@@ -7,14 +8,12 @@ interface Props {
 }
 
 export default function ProductCard({ product, quantity, onQuantityChange }: Props) {
-  const MEDIA = '/media'
-
   return (
     <div className="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden flex flex-col">
       {product.image ? (
         <div className="aspect-square overflow-hidden">
           <img
-            src={`${MEDIA}${product.image}`}
+            src={mediaUrl(product.image)}
             alt={product.name}
             className="w-full h-full object-cover"
           />

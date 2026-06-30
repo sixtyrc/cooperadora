@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom'
 import type { Campaign } from '../types'
+import { mediaUrl } from '../api/media'
 
 export default function CampaignCard({ campaign }: { campaign: Campaign }) {
-  const MEDIA = '/media'
-
   return (
     <Link
       to={`/campanas/${campaign.slug}`}
@@ -12,7 +11,7 @@ export default function CampaignCard({ campaign }: { campaign: Campaign }) {
       {campaign.image && (
         <div className="aspect-video overflow-hidden">
           <img
-            src={`${MEDIA}${campaign.image}`}
+            src={mediaUrl(campaign.image)}
             alt={campaign.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />

@@ -84,10 +84,10 @@ El proyecto se está desarrollando de manera iterativa por fases. Actualmente el
 | 6 | Toma de Pedidos | ✅ Completada |
 | 7 | Sistema de Pagos y Comprobantes | ✅ Completada |
 | 8 | Control de Entregas | ✅ Completada |
-| 9 | Reportes y Dashboard | ⏳ En Progreso |
-| 10 | Frontend Público (React) | ⏳ Pendiente |
-| 11 | Backoffice Administrativo (React) | ⏳ Pendiente |
-| 12 | Despliegue a Producción | ⏳ Pendiente |
+| 9 | Reportes y Dashboard | ✅ Completada |
+| 10 | Frontend Público (React) | ✅ Completada |
+| 11 | Backoffice Administrativo (React) | ✅ Completada |
+| 12 | Despliegue a Producción | ✅ Configurado; pendiente validar en servidor |
 
 ---
 

@@ -1,15 +1,20 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useInstitution } from '../context/useInstitution'
+import { mediaUrl } from '../api/media'
 
 export default function Navbar() {
   const { pathname } = useLocation()
+  const { institution } = useInstitution()
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 no-underline">
-          <span className="text-2xl">🏫</span>
+          {institution?.logo
+            ? <img src={mediaUrl(institution.logo)} alt="" className="w-9 h-9 rounded-lg object-contain" />
+            : <span className="text-2xl">🏫</span>}
           <span className="font-heading font-bold text-lg text-gray-900">
-            Cooperadora
+            {institution?.name || 'Cooperadora'}
           </span>
         </Link>
         <div className="flex items-center gap-4 text-sm">

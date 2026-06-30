@@ -113,6 +113,13 @@ export interface Payment {
   ocr_date: string
   ocr_operation_id: string
   created_at: string
+  order_code: string
+  order_total: string
+  voucher_hash: string
+  reconciliation_status: 'conciliado' | 'monto_diferente' | 'duplicado' | 'sin_datos' | 'manual'
+  reconciliation_display: string
+  reconciliation_issues: string[]
+  duplicate_of: number | null
 }
 
 export interface Delivery {

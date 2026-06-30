@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { Institution } from '../types'
+import { useInstitution } from '../context/useInstitution'
 
 export default function SettingsPage() {
+  const { refreshInstitution } = useInstitution()
   const [, setInstitution] = useState<Institution | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -13,6 +15,7 @@ export default function SettingsPage() {
     phone: '', whatsapp: '', address: '', welcome_message: '',
   })
   const [socialLinks, setSocialLinks] = useState<{ key: string; value: string }[]>([])
+  const [logo, setLogo] = useState<File | null>(null)
 
   useEffect(() => {
     api.getInstitution().then(inst => {
@@ -49,9 +52,13 @@ export default function SettingsPage() {
       socialLinks.forEach(l => {
         if (l.key.trim()) linksObj[l.key.trim()] = l.value
       })
-      const payload = { ...form, social_links: linksObj }
-      const updated = await api.updateInstitution(payload as unknown as Partial<Institution>)
+      const payload = new FormData()
+      Object.entries(form).forEach(([key, value]) => payload.append(key, value))
+      payload.append('social_links', JSON.stringify(linksObj))
+      if (logo) payload.append('logo', logo)
+      const updated = await api.updateInstitution(payload)
       setInstitution(updated)
+      await refreshInstitution()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (e) {
@@ -70,6 +77,11 @@ export default function SettingsPage() {
       <div className="max-w-2xl">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setLogo(e.target.files?.[0] || null)} className="w-full text-sm" />
+              <p className="text-xs text-gray-400 mt-1">Se mostrará en la portada y en la barra superior.</p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Institución</label>
               <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" required />

@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from products.serializers import ProductPublicSerializer
 from .models import Order, OrderItem
@@ -26,8 +27,31 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     def validate_items(self, value):
         if not value:
             raise serializers.ValidationError("El pedido debe tener al menos un ítem.")
+        if len(value) > 30:
+            raise serializers.ValidationError("El pedido no puede superar los 30 productos.")
+        product_ids = [item['product'].pk for item in value]
+        if len(product_ids) != len(set(product_ids)):
+            raise serializers.ValidationError("No repitas productos; aumentá la cantidad.")
+        for item in value:
+            if item.get('quantity', 1) < 1 or item.get('quantity', 1) > 99:
+                raise serializers.ValidationError("La cantidad debe estar entre 1 y 99.")
         return value
 
+    def validate(self, attrs):
+        campaign = attrs['campaign']
+        if not campaign.is_visible:
+            raise serializers.ValidationError(
+                {'campaign': 'Esta campaña no está disponible para recibir pedidos.'}
+            )
+        for item in attrs.get('items', []):
+            product = item['product']
+            if product.campaign_id != campaign.pk or not product.is_active:
+                raise serializers.ValidationError(
+                    {'items': f'El producto "{product.name}" no está disponible en esta campaña.'}
+                )
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         order = Order.objects.create(**validated_data)
@@ -51,6 +75,17 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
+        read_only_fields = [
+            'id', 'code', 'campaign', 'customer_name', 'phone', 'student_name',
+            'classroom', 'notes', 'total', 'created_at', 'updated_at',
+        ]
+
+    def validate_phone(self, value):
+        if not value.isdigit() or len(value) != 10:
+            raise serializers.ValidationError(
+                "Ingresá 10 números, sin espacios ni guiones. Ejemplo: 3624617500."
+            )
+        return value
 
 
 class OrderDeliveryCheckSerializer(serializers.ModelSerializer):

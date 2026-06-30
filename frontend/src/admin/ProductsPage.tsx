@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { Product, Campaign } from '../types'
 
@@ -14,16 +14,16 @@ export default function ProductsPage() {
     campaign: 0, name: '', description: '', price: '', cost: '', order: 0, is_active: true
   })
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true)
     Promise.all([
       api.getAdminProducts(filterCampaign || undefined),
       api.getAdminCampaigns()
     ]).then(([p, c]) => { setProducts(p); setCampaigns(c) })
       .finally(() => setLoading(false))
-  }
+  }, [filterCampaign])
 
-  useEffect(() => { load() }, [filterCampaign])
+  useEffect(() => { load() }, [load])
 
   const openNew = () => {
     setEditing(null)

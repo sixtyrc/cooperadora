@@ -72,7 +72,7 @@ export default function OrderForm() {
         items,
       }
       const res = await api.createOrder(payload)
-      navigate(`/consultar?code=${res.code}`)
+      navigate(`/consultar?code=${encodeURIComponent(res.code)}&phone=${encodeURIComponent(form.phone)}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error al crear el pedido')
     } finally {
@@ -149,11 +149,16 @@ export default function OrderForm() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
           <input
             type="tel"
+            inputMode="numeric"
+            pattern="[0-9]{10}"
+            maxLength={10}
+            placeholder="Ej: 3624617500"
             required
             value={form.phone}
-            onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+            onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
             className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary text-sm"
           />
+          <p className="text-xs text-gray-400 mt-1">10 números, sin espacios ni guiones.</p>
         </div>
 
         <div>
