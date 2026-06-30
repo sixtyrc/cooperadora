@@ -1,7 +1,25 @@
+from datetime import datetime
+
+from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework import generics, permissions
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from orders.models import Order
 from .models import Payment
 from .serializers import PaymentSerializer, PaymentAdminSerializer
+from orders.payment_pdf import generate_payment_pdf
+from .ocr_utils import extract_voucher_data
+from accounts.audit import log_action
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return timezone.make_aware(datetime.strptime(value, "%Y-%m-%d"))
+    except ValueError:
+        return None
 
 
 class PaymentCreateView(generics.CreateAPIView):
@@ -25,10 +43,26 @@ class PaymentCreateView(generics.CreateAPIView):
 
 
 class PaymentAdminListView(generics.ListAPIView):
-    """GET /api/admin/payments — backoffice, todos los pagos."""
+    """GET /api/admin/payments — backoffice, todos los pagos con filtros."""
     serializer_class = PaymentAdminSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Payment.objects.select_related('order').order_by('-created_at')
+
+    def get_queryset(self):
+        qs = Payment.objects.select_related('order').order_by('-created_at')
+        status_filter = self.request.query_params.get('status')
+        campaign = self.request.query_params.get('campaign')
+        date_from = _parse_date(self.request.query_params.get('date_from'))
+        date_to = _parse_date(self.request.query_params.get('date_to'))
+
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        if campaign:
+            qs = qs.filter(order__campaign__slug=campaign)
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from.date())
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to.date())
+        return qs
 
 
 class PaymentAdminDetailView(generics.RetrieveUpdateAPIView):
@@ -39,8 +73,47 @@ class PaymentAdminDetailView(generics.RetrieveUpdateAPIView):
 
     def perform_update(self, serializer):
         payment = serializer.save()
-        # Si se verifica el pago, actualizar estado del pedido
+        user = self.request.user
         if payment.status == Payment.STATUS_VERIFIED:
             Order.objects.filter(pk=payment.order.pk).update(status=Order.STATUS_PAID)
+            log_action(user, 'pago_verificado',
+                       f'Verificó pago #{payment.id} del pedido {payment.order.code} — ${payment.order.total}',
+                       self.request)
         elif payment.status == Payment.STATUS_REJECTED:
             Order.objects.filter(pk=payment.order.pk).update(status=Order.STATUS_PENDING)
+            log_action(user, 'pago_rechazado',
+                       f'Rechazó pago #{payment.id} del pedido {payment.order.code}',
+                       self.request)
+
+
+class PaymentPdfView(generics.GenericAPIView):
+    """GET /api/payments/<id>/pdf — descargar comprobante de carga de pago."""
+    permission_classes = [permissions.AllowAny]
+    queryset = Payment.objects.select_related('order')
+
+    def get(self, request, pk):
+        try:
+            payment = Payment.objects.select_related('order').get(pk=pk)
+        except Payment.DoesNotExist:
+            return Response({'detail': 'Pago no encontrado'}, status=404)
+        buf = generate_payment_pdf(payment.order, payment)
+        response = HttpResponse(buf, content_type='application/pdf')
+        filename = f"comprobante-{payment.order.code}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+
+class PaymentOcrView(generics.GenericAPIView):
+    """POST /api/payments/ocr — lee datos de un comprobante bancario con OCR."""
+    permission_classes = [permissions.AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file = request.FILES.get('voucher')
+        if not file:
+            return Response({'detail': 'Adjuntá un archivo (jpg, png).'}, status=400)
+        try:
+            data = extract_voucher_data(file)
+        except Exception as e:
+            return Response({'detail': f'Error al procesar imagen: {str(e)}'}, status=400)
+        return Response(data)

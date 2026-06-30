@@ -32,6 +32,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 class PaymentAdminSerializer(serializers.ModelSerializer):
     """Para el backoffice, permite cambiar estado."""
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    customer_name = serializers.CharField(source='order.customer_name', read_only=True)
 
     class Meta:
         model = Payment

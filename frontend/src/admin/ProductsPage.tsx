@@ -9,8 +9,9 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [form, setForm] = useState({
-    campaign: 0, name: '', description: '', price: '', image: '', order: 0, is_active: true
+    campaign: 0, name: '', description: '', price: '', cost: '', order: 0, is_active: true
   })
 
   const load = () => {
@@ -26,22 +27,37 @@ export default function ProductsPage() {
 
   const openNew = () => {
     setEditing(null)
-    setForm({ campaign: campaigns[0]?.id || 0, name: '', description: '', price: '', image: '', order: 0, is_active: true })
+    setImageFile(null)
+    setForm({ campaign: campaigns[0]?.id || 0, name: '', description: '', price: '', cost: '', order: 0, is_active: true })
     setShowModal(true)
   }
 
   const openEdit = (p: Product) => {
     setEditing(p)
-    setForm({ campaign: (p as Product & { campaign?: number }).campaign || 0, name: p.name, description: p.description, price: p.price, image: p.image || '', order: p.order, is_active: true })
+    setImageFile(null)
+    setForm({
+      campaign: (p as Product & { campaign?: number }).campaign || 0,
+      name: p.name, description: p.description, price: p.price,
+      cost: p.cost || '0', order: p.order, is_active: true
+    })
     setShowModal(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const fd = new FormData()
+    fd.append('campaign', String(form.campaign))
+    fd.append('name', form.name)
+    fd.append('description', form.description)
+    fd.append('price', form.price)
+    fd.append('cost', form.cost || '0')
+    fd.append('order', String(form.order))
+    fd.append('is_active', String(form.is_active))
+    if (imageFile) fd.append('image', imageFile)
     if (editing) {
-      await api.updateProduct(editing.id, form)
+      await api.updateProduct(editing.id, fd)
     } else {
-      await api.createProduct(form)
+      await api.createProduct(fd)
     }
     setShowModal(false)
     load()
@@ -77,25 +93,38 @@ export default function ProductsPage() {
               <thead>
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-5 py-3 font-medium text-gray-500">Nombre</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Costo</th>
                   <th className="text-left px-5 py-3 font-medium text-gray-500">Precio</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Ganancia</th>
                   <th className="text-left px-5 py-3 font-medium text-gray-500">Orden</th>
                   <th className="text-right px-5 py-3 font-medium text-gray-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map(p => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium">{p.name}</td>
-                    <td className="px-5 py-3">${p.price}</td>
-                    <td className="px-5 py-3 text-gray-500">{p.order}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button onClick={() => openEdit(p)} className="text-primary hover:text-primary-dark mr-3 text-sm">Editar</button>
-                      <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-sm">Eliminar</button>
-                    </td>
-                  </tr>
-                ))}
+                {products.map(p => {
+                  const cost = parseFloat(p.cost || '0')
+                  const price = parseFloat(p.price || '0')
+                  const profit = price - cost
+                  return (
+                    <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="px-5 py-3 font-medium">{p.name}</td>
+                      <td className="px-5 py-3 text-gray-500">${cost.toFixed(2)}</td>
+                      <td className="px-5 py-3">${price.toFixed(2)}</td>
+                      <td className="px-5 py-3">
+                        <span className={`font-medium ${profit > 0 ? 'text-green-600' : profit < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                          ${profit.toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-gray-500">{p.order}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button onClick={() => openEdit(p)} className="text-primary hover:text-primary-dark mr-3 text-sm">Editar</button>
+                        <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-sm">Eliminar</button>
+                      </td>
+                    </tr>
+                  )
+                })}
                 {products.length === 0 && (
-                  <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400">No hay productos</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-8 text-center text-gray-400">No hay productos</td></tr>
                 )}
               </tbody>
             </table>
@@ -125,16 +154,41 @@ export default function ProductsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                 <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none" rows={2} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
+                  <input type="number" step="0.01" value={form.cost} onChange={e => setForm({...form, cost: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none" placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta</label>
                   <input type="number" step="0.01" value={form.price} onChange={e => setForm({...form, price: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
                   <input type="number" value={form.order} onChange={e => setForm({...form, order: Number(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none" />
+                  <p className="text-xs text-gray-400 mt-1">Número menor = aparece primero en la tienda. Dejar en 0 para orden alfabético.</p>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Imagen del producto</label>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
+                  onChange={e => setImageFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+                {editing?.image && !imageFile && (
+                  <p className="text-xs text-gray-400 mt-1">Actual: {editing.image.split('/').pop()}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">JPG o PNG — Se comprime automáticamente</p>
+              </div>
+              {form.cost && form.price && (
+                <div className="text-sm text-gray-500">
+                  Ganancia unitaria: <span className={`font-bold ${parseFloat(form.price) - parseFloat(form.cost || '0') >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    ${(parseFloat(form.price) - parseFloat(form.cost || '0')).toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold transition-colors">{editing ? 'Guardar' : 'Crear'}</button>

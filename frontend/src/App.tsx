@@ -5,6 +5,7 @@ import Campaigns from './pages/Campaigns'
 import CampaignDetail from './pages/CampaignDetail'
 import OrderForm from './pages/OrderForm'
 import OrderQuery from './pages/OrderQuery'
+import PaymentPage from './pages/PaymentPage'
 import AdminLayout from './admin/AdminLayout'
 import LoginPage from './admin/LoginPage'
 import DashboardPage from './admin/DashboardPage'
@@ -17,6 +18,7 @@ import ReportsPage from './admin/ReportsPage'
 import SettingsPage from './admin/SettingsPage'
 import UsersPage from './admin/UsersPage'
 import AuditPage from './admin/AuditPage'
+import HelpPage from './admin/HelpPage'
 
 export default function App() {
   return (
@@ -28,6 +30,7 @@ export default function App() {
           <Route path="/campanas/:slug" element={<CampaignDetail />} />
           <Route path="/campanas/:slug/pedir" element={<OrderForm />} />
           <Route path="/consultar" element={<OrderQuery />} />
+          <Route path="/pagar/:code" element={<PaymentPage />} />
         </Route>
         <Route path="/admin/login" element={<LoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>
@@ -41,6 +44,7 @@ export default function App() {
           <Route path="configuracion" element={<SettingsPage />} />
           <Route path="usuarios" element={<UsersPage />} />
           <Route path="auditoria" element={<AuditPage />} />
+          <Route path="ayuda" element={<HelpPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

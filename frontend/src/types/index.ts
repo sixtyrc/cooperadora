@@ -30,6 +30,7 @@ export interface Product {
   name: string
   description: string
   price: string
+  cost: string
   image: string | null
   order: number
 }
@@ -99,11 +100,18 @@ export interface AdminOrder {
 export interface Payment {
   id: number
   order: number
+  customer_name: string
   method: string
+  method_display: string
   voucher: string | null
   status: string
   status_display: string
   notes: string
+  ocr_name: string
+  ocr_dni: string
+  ocr_amount: string | null
+  ocr_date: string
+  ocr_operation_id: string
   created_at: string
 }
 
@@ -115,6 +123,17 @@ export interface Delivery {
   user_name: string
   delivered_at: string
   notes: string
+}
+
+export interface DeliveryCheck {
+  id: number
+  code: string
+  customer_name: string
+  student_name: string
+  classroom: string
+  status: string
+  status_display: string
+  is_delivered: boolean
 }
 
 export interface User {
@@ -170,4 +189,22 @@ export interface ClassroomReport {
   classroom: string
   total_orders: number
   total_amount: string
+}
+
+export interface FinancialReport {
+  total_sales: string
+  total_collected_cash: string
+  total_collected_transfer: string
+  total_cost: string
+  total_profit: string
+  profit_margin: string
+  by_campaign: FinancialCampaignRow[]
+}
+
+export interface FinancialCampaignRow {
+  name: string
+  total_sales: string
+  total_cost: string
+  total_profit: string
+  quantity_sold: number
 }

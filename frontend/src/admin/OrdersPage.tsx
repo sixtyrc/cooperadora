@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import type { AdminOrder } from '../types'
+import type { AdminOrder, Campaign } from '../types'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos' },
@@ -11,22 +11,39 @@ const STATUS_OPTIONS = [
   { value: 'cancelado', label: 'Cancelado' },
 ]
 
+interface Filters {
+  status: string
+  campaign: string
+  date_from: string
+  date_to: string
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([])
-  const [filter, setFilter] = useState('')
+  const [filters, setFilters] = useState<Filters>({ status: '', campaign: '', date_from: '', date_to: '' })
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<AdminOrder | null>(null)
+  const [campaignList, setCampaignList] = useState<Campaign[]>([])
 
-  const load = () => {
+  const load = (f: Filters) => {
     setLoading(true)
-    api.getAdminOrders(filter || undefined).then(setOrders).finally(() => setLoading(false))
+    api.getAdminOrders({
+      status: f.status || undefined,
+      campaign: f.campaign || undefined,
+      date_from: f.date_from || undefined,
+      date_to: f.date_to || undefined,
+    }).then(setOrders).finally(() => setLoading(false))
   }
 
-  useEffect(() => { load() }, [filter])
+  useEffect(() => { load(filters) }, [filters])
+
+  useEffect(() => {
+    api.getAdminCampaigns().then(setCampaignList)
+  }, [])
 
   const handleStatusChange = async (id: number, status: string) => {
     await api.updateOrder(id, { status } as Partial<AdminOrder>)
-    load()
+    load(filters)
     if (selected?.id === id) {
       const updated = await api.getAdminOrder(id)
       setSelected(updated)
@@ -37,9 +54,34 @@ export default function OrdersPage() {
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="font-heading text-2xl font-bold text-gray-900">Pedidos</h1>
-        <select value={filter} onChange={e => setFilter(e.target.value)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none">
-          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl shadow-md p-4 mb-6 flex flex-wrap gap-4 items-end">
+        <div className="flex-1 min-w-[140px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+          <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none">
+            {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Campaña</label>
+          <select value={filters.campaign} onChange={e => setFilters({ ...filters, campaign: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none">
+            <option value="">Todas</option>
+            {campaignList.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[140px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Desde</label>
+          <input type="date" value={filters.date_from} onChange={e => setFilters({ ...filters, date_from: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none" />
+        </div>
+        <div className="flex-1 min-w-[140px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Hasta</label>
+          <input type="date" value={filters.date_to} onChange={e => setFilters({ ...filters, date_to: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none" />
+        </div>
+        <button onClick={() => setFilters({ status: '', campaign: '', date_from: '', date_to: '' })} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
+          Limpiar
+        </button>
       </div>
 
       {loading ? (

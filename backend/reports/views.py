@@ -10,12 +10,14 @@ from .serializers import (
     CampaignReportSerializer,
     ClassroomReportSerializer,
     DashboardSerializer,
+    FinancialReportSerializer,
     ProductReportSerializer,
 )
 from .utils import (
     build_campaign_report,
     build_classroom_report,
     build_dashboard_data,
+    build_financial_report,
     build_product_report,
     export_excel,
     export_pdf,
@@ -74,6 +76,17 @@ class ClassroomReportView(APIView):
         qs = get_filtered_orders(request)
         data = build_classroom_report(qs)
         serializer = ClassroomReportSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+class FinancialReportView(APIView):
+    """GET /api/reports/financial"""
+    permission_classes = [IsAdminOrOperator]
+
+    def get(self, request):
+        qs = get_filtered_orders(request)
+        data = build_financial_report(qs)
+        serializer = FinancialReportSerializer(data)
         return Response(serializer.data)
 
 

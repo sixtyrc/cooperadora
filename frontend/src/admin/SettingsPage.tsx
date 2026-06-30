@@ -11,8 +11,8 @@ export default function SettingsPage() {
   const [form, setForm] = useState({
     name: '', primary_color: '#22C55E', secondary_color: '#16A34A',
     phone: '', whatsapp: '', address: '', welcome_message: '',
-    social_links: '{}' as string
   })
+  const [socialLinks, setSocialLinks] = useState<{ key: string; value: string }[]>([])
 
   useEffect(() => {
     api.getInstitution().then(inst => {
@@ -25,10 +25,19 @@ export default function SettingsPage() {
         whatsapp: inst.whatsapp,
         address: inst.address,
         welcome_message: inst.welcome_message,
-        social_links: JSON.stringify(inst.social_links, null, 2)
       })
+      const links = Object.entries(inst.social_links || {})
+      setSocialLinks(links.length > 0 ? links.map(([key, value]) => ({ key, value })) : [{ key: '', value: '' }])
     }).finally(() => setLoading(false))
   }, [])
+
+  const addLink = () => setSocialLinks([...socialLinks, { key: '', value: '' }])
+  const removeLink = (i: number) => setSocialLinks(socialLinks.filter((_, idx) => idx !== i))
+  const updateLink = (i: number, field: 'key' | 'value', val: string) => {
+    const next = [...socialLinks]
+    next[i] = { ...next[i], [field]: val }
+    setSocialLinks(next)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,15 +45,11 @@ export default function SettingsPage() {
     setError('')
     setSuccess(false)
     try {
-      let socialLinks: Record<string, string> = {}
-      try {
-        socialLinks = JSON.parse(form.social_links)
-      } catch {
-        setError('Redes sociales: JSON inválido')
-        setSaving(false)
-        return
-      }
-      const payload = { ...form, social_links: socialLinks }
+      const linksObj: Record<string, string> = {}
+      socialLinks.forEach(l => {
+        if (l.key.trim()) linksObj[l.key.trim()] = l.value
+      })
+      const payload = { ...form, social_links: linksObj }
       const updated = await api.updateInstitution(payload as unknown as Partial<Institution>)
       setInstitution(updated)
       setSuccess(true)
@@ -103,8 +108,27 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Redes Sociales (JSON)</label>
-              <textarea value={form.social_links} onChange={e => setForm({...form, social_links: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none font-mono text-sm" rows={4} placeholder='{"instagram": "...", "facebook": "..."}' />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Redes Sociales</label>
+              <div className="space-y-2">
+                {socialLinks.map((link, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <input
+                      value={link.key}
+                      onChange={e => updateLink(i, 'key', e.target.value)}
+                      placeholder="Nombre (ej: instagram)"
+                      className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none"
+                    />
+                    <input
+                      value={link.value}
+                      onChange={e => updateLink(i, 'value', e.target.value)}
+                      placeholder="URL o usuario"
+                      className="flex-[2] px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none"
+                    />
+                    <button type="button" onClick={() => removeLink(i)} className="text-gray-400 hover:text-red-500 text-lg px-2">✕</button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addLink} className="mt-2 text-sm text-primary hover:text-primary-dark font-medium">+ Agregar red</button>
             </div>
 
             {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}

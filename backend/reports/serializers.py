@@ -34,3 +34,21 @@ class ClassroomReportSerializer(serializers.Serializer):
     classroom = serializers.CharField()
     total_orders = serializers.IntegerField()
     total_amount = serializers.CharField()
+
+
+class FinancialCampaignRowSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    total_sales = serializers.CharField()
+    total_cost = serializers.CharField()
+    total_profit = serializers.CharField()
+    quantity_sold = serializers.IntegerField()
+
+
+class FinancialReportSerializer(serializers.Serializer):
+    total_sales = serializers.CharField()
+    total_collected_cash = serializers.CharField()
+    total_collected_transfer = serializers.CharField()
+    total_cost = serializers.CharField()
+    total_profit = serializers.CharField()
+    profit_margin = serializers.CharField()
+    by_campaign = FinancialCampaignRowSerializer(many=True)

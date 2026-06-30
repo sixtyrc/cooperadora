@@ -14,3 +14,12 @@
 | Fase 10 - Frontend Público | Completada | 2026-06-30 | `/docs/fase_10.md` |
 | Fase 11 - Backoffice | Completada | 2026-06-30 | `/docs/fase_11.md` |
 | Fase 12 - Producción | Pendiente | | |
+| Código pedido PZA → COOP-YYYY | Completada | 2026-06-30 | `01_sesion.md` |
+| PDF descargable de pedido | Completada | 2026-06-30 | `01_sesion.md` |
+| PDF comprobante de pago | Completada | 2026-06-30 | `01_sesion.md` |
+| OCR comprobantes (Tesseract) | Completada | 2026-06-30 | `01_sesion.md` |
+| Datos OCR guardados en Payment | Completada | 2026-06-30 | `01_sesion.md` |
+| Imágenes en campañas y productos | Completada | 2026-06-30 | `01_sesion.md` |
+| Auditoría completa (acciones admin) | Completada | 2026-06-30 | `01_sesion.md` |
+| Entregas redesign (checklist toggle) | Completada | 2026-06-30 | `01_sesion.md` |
+| "Verificando Pago" rename | Completada | 2026-06-30 | `01_sesion.md` |

@@ -51,3 +51,16 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
+
+
+class OrderDeliveryCheckSerializer(serializers.ModelSerializer):
+    """Serializer ligero para checklist de entregas."""
+    is_delivered = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'code', 'customer_name', 'student_name', 'classroom', 'status', 'status_display', 'is_delivered']
+
+    def get_is_delivered(self, obj):
+        return hasattr(obj, 'delivery')

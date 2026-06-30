@@ -7,6 +7,16 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = '__all__'
+        extra_kwargs = {
+            'status': {'required': False},
+            'is_active': {'required': False},
+        }
+
+    def validate_status(self, value):
+        valid = [c[0] for c in Campaign.STATUS_CHOICES]
+        if value not in valid:
+            raise serializers.ValidationError(f"Status inválido. Opciones: {', '.join(valid)}")
+        return value
 
 class CampaignPublicSerializer(serializers.ModelSerializer):
     """Solo campos públicos para visitantes."""

@@ -31,6 +31,17 @@ export default function Home() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary to-primary-dark text-white py-16 px-4">
         <div className="max-w-5xl mx-auto text-center">
+          {institution?.logo ? (
+            <img
+              src={`${import.meta.env.VITE_API_URL || ''}${institution.logo}`}
+              alt={institution.name}
+              className="h-20 mx-auto mb-6 rounded-2xl object-contain bg-white p-2"
+            />
+          ) : (
+            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-4xl">
+              🏫
+            </div>
+          )}
           <h1 className="font-heading text-4xl md:text-5xl font-extrabold mb-4">
             {institution?.name || 'Cooperadora Online'}
           </h1>

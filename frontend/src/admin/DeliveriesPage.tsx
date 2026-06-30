@@ -1,44 +1,94 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { api } from '../api/client'
-import type { Delivery, AdminOrder } from '../types'
+import type { DeliveryCheck, Campaign } from '../types'
 
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState<Delivery[]>([])
+  const [orders, setOrders] = useState<DeliveryCheck[]>([])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [campaign, setCampaign] = useState('')
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [selected, setSelected] = useState<Delivery | null>(null)
-  const [pendingOrders, setPendingOrders] = useState<AdminOrder[]>([])
-  const [form, setForm] = useState({ order: 0, notes: '' })
+  const [toggling, setToggling] = useState<number | null>(null)
 
-  const load = () => {
+  const loadData = async () => {
     setLoading(true)
-    api.getAdminDeliveries().then(setDeliveries).finally(() => setLoading(false))
+    const camps = await api.getAdminCampaigns()
+    setCampaigns(camps)
+    // Si no hay campaña seleccionada, buscar la activa
+    if (!campaign) {
+      const active = camps.find(c => c.status === 'active')
+      if (active) setCampaign(active.slug)
+    }
+    setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadData() }, [])
 
-  const openNew = async () => {
-    const orders = await api.getAdminOrders('pagado')
-    setPendingOrders(orders)
-    setForm({ order: orders[0]?.id || 0, notes: '' })
-    setShowModal(true)
-  }
+  useEffect(() => {
+    if (!campaign) return
+    setLoading(true)
+    api.getDeliveryCheck(campaign).then(setOrders).finally(() => setLoading(false))
+  }, [campaign])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await api.createDelivery(form)
-    setShowModal(false)
-    load()
+  const filtered = useMemo(() => {
+    if (!search.trim()) return orders
+    const q = search.toLowerCase()
+    return orders.filter(o =>
+      o.customer_name.toLowerCase().includes(q) ||
+      o.student_name.toLowerCase().includes(q) ||
+      o.code.toLowerCase().includes(q)
+    )
+  }, [orders, search])
+
+  const deliveredCount = filtered.filter(o => o.is_delivered).length
+
+  const handleToggle = async (orderId: number) => {
+    setToggling(orderId)
+    try {
+      const res = await api.toggleDelivery(orderId)
+      setOrders(prev => prev.map(o =>
+        o.id === orderId ? { ...o, is_delivered: res.delivered } : o
+      ))
+    } catch {
+      // silently fail
+    } finally {
+      setToggling(null)
+    }
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-2xl font-bold text-gray-900">Entregas</h1>
-        <button onClick={openNew} className="bg-primary hover:bg-primary-dark text-white font-bold px-4 py-2 rounded-xl transition-colors text-sm">
-          Nueva Entrega
-        </button>
+      <h1 className="font-heading text-2xl font-bold text-gray-900 mb-6">Entregas</h1>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl shadow-md p-4 mb-4 flex flex-wrap gap-4 items-end">
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Campaña</label>
+          <select value={campaign} onChange={e => setCampaign(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none">
+            <option value="">Seleccionar campaña</option>
+            {campaigns.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="flex-[2] min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Buscar</label>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Nombre del cliente, alumno o código..."
+            className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:border-primary outline-none"
+          />
+        </div>
       </div>
+
+      {/* Resumen */}
+      {campaign && (
+        <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
+          <span>{filtered.length} pedidos</span>
+          <span className="text-green-600 font-medium">{deliveredCount} entregados</span>
+          <span className="text-orange-500 font-medium">{filtered.length - deliveredCount} pendientes</span>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-gray-400">Cargando...</div>
@@ -48,76 +98,55 @@ export default function DeliveriesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left px-5 py-3 font-medium text-gray-500">ID</th>
-                  <th className="text-left px-5 py-3 font-medium text-gray-500">Pedido</th>
-                  <th className="text-left px-5 py-3 font-medium text-gray-500">Entregado por</th>
-                  <th className="text-left px-5 py-3 font-medium text-gray-500">Fecha</th>
-                  <th className="text-left px-5 py-3 font-medium text-gray-500">Notas</th>
-                  <th className="text-right px-5 py-3 font-medium text-gray-500">Acciones</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500 w-12">✓</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Código</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Cliente</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Alumno/a</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Sala</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-500">Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {deliveries.map(d => (
-                  <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-5 py-3 font-mono text-xs">#{d.id}</td>
-                    <td className="px-5 py-3 font-mono text-primary">{d.order_code}</td>
-                    <td className="px-5 py-3">{d.user_name}</td>
-                    <td className="px-5 py-3 text-gray-500">{new Date(d.delivered_at).toLocaleString('es-AR')}</td>
-                    <td className="px-5 py-3 text-gray-500 max-w-xs truncate">{d.notes || '-'}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button onClick={() => setSelected(d)} className="text-primary hover:text-primary-dark text-sm">Ver</button>
+                {filtered.map(o => (
+                  <tr key={o.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${o.is_delivered ? 'bg-green-50/50' : ''}`}>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => handleToggle(o.id)}
+                        disabled={toggling === o.id}
+                        className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all ${
+                          o.is_delivered
+                            ? 'bg-primary border-primary text-white'
+                            : 'border-gray-300 hover:border-primary'
+                        } disabled:opacity-50`}
+                      >
+                        {toggling === o.id ? (
+                          <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        ) : o.is_delivered ? (
+                          <span className="text-sm font-bold">✓</span>
+                        ) : null}
+                      </button>
+                    </td>
+                    <td className="px-5 py-3 font-mono text-primary font-medium">{o.code}</td>
+                    <td className="px-5 py-3 font-medium">{o.customer_name}</td>
+                    <td className="px-5 py-3 text-gray-600">{o.student_name}</td>
+                    <td className="px-5 py-3 text-gray-600">{o.classroom}</td>
+                    <td className="px-5 py-3">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        o.is_delivered ? 'bg-green-100 text-green-700' :
+                        o.status === 'pagado' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {o.is_delivered ? 'Entregado' : o.status_display}
+                      </span>
                     </td>
                   </tr>
                 ))}
-                {deliveries.length === 0 && (
-                  <tr><td colSpan={6} className="px-5 py-8 text-center text-gray-400">No hay entregas</td></tr>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={6} className="px-5 py-8 text-center text-gray-400">
+                    {orders.length === 0 ? 'No hay pedidos para esta campaña' : 'No se encontraron resultados'}
+                  </td></tr>
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="font-heading font-bold text-lg">Nueva Entrega</h2>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pedido (pagado)</label>
-                <select value={form.order} onChange={e => setForm({...form, order: Number(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none" required>
-                  {pendingOrders.length === 0 && <option value={0}>No hay pedidos pagados</option>}
-                  {pendingOrders.map(o => <option key={o.id} value={o.id}>{o.code} - {o.customer_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none" rows={2} />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold transition-colors">Registrar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {selected && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-heading font-bold text-lg">Entrega #{selected.id}</h2>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-            <div className="p-6 space-y-3 text-sm">
-              <div><span className="text-gray-500">Pedido:</span> <span className="font-mono font-medium text-primary">{selected.order_code}</span></div>
-              <div><span className="text-gray-500">Entregado por:</span> <span className="font-medium">{selected.user_name}</span></div>
-              <div><span className="text-gray-500">Fecha:</span> <span className="font-medium">{new Date(selected.delivered_at).toLocaleString('es-AR')}</span></div>
-              {selected.notes && <div><span className="text-gray-500">Notas:</span> <span>{selected.notes}</span></div>}
-            </div>
           </div>
         </div>
       )}

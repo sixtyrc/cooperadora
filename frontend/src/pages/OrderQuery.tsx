@@ -11,6 +11,8 @@ const STATUS_STYLES: Record<string, string> = {
   cancelado: 'bg-red-100 text-red-700',
 }
 
+const PAYABLE_STATUSES = ['pendiente', 'pendiente_pago']
+
 export default function OrderQuery() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [code, setCode] = useState(searchParams.get('code') || '')
@@ -133,6 +135,24 @@ export default function OrderQuery() {
 
           <div className="mt-4 text-xs text-gray-400">
             Creado: {new Date(order.created_at).toLocaleString('es-AR')}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            {PAYABLE_STATUSES.includes(order.status) && (
+              <Link
+                to={`/pagar/${order.code}`}
+                className="block w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-colors text-center"
+              >
+                Registrar pago
+              </Link>
+            )}
+            <a
+              href={api.getOrderPdfUrl(order.code)}
+              download
+              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors text-center"
+            >
+              Descargar PDF
+            </a>
           </div>
         </div>
       )}

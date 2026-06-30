@@ -13,6 +13,7 @@ const links = [
   { to: '/admin/configuracion', label: 'Configuración', icon: '⚙️' },
   { to: '/admin/usuarios', label: 'Usuarios', icon: '👥', adminOnly: true },
   { to: '/admin/auditoria', label: 'Auditoría', icon: '📋', adminOnly: true },
+  { to: '/admin/ayuda', label: 'Manual', icon: '❓' },
 ]
 
 export default function AdminLayout() {

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Campaign } from '../types'
 
 export default function CampaignCard({ campaign }: { campaign: Campaign }) {
-  const MEDIA = import.meta.env.VITE_API_URL || ''
+  const MEDIA = '/media'
 
   return (
     <Link

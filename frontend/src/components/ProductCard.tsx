@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function ProductCard({ product, quantity, onQuantityChange }: Props) {
-  const MEDIA = import.meta.env.VITE_API_URL || ''
+  const MEDIA = '/media'
 
   return (
     <div className="bg-white rounded-3xl shadow-md border border-gray-100 overflow-hidden flex flex-col">

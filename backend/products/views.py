@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions
 from .models import Product
 from .serializers import ProductSerializer, ProductPublicSerializer
+from accounts.audit import log_action
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -28,8 +29,24 @@ class ProductAdminListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     queryset = Product.objects.all().order_by('campaign', 'order')
 
+    def perform_create(self, serializer):
+        product = serializer.save()
+        log_action(self.request.user, 'producto_creado',
+                   f'Creó producto "{product.name}" (${product.price})', self.request)
+
 
 class ProductAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     queryset = Product.objects.all()
+
+    def perform_update(self, serializer):
+        product = serializer.save()
+        log_action(self.request.user, 'producto_editado',
+                   f'Editó producto "{product.name}"', self.request)
+
+    def perform_destroy(self, instance):
+        name = instance.name
+        instance.delete()
+        log_action(self.request.user, 'producto_eliminado',
+                   f'Eliminó producto "{name}"', self.request)

@@ -6,7 +6,7 @@ from products.models import Product
 
 def generate_order_code():
     year = timezone.now().year
-    prefix = f"PZA-{year}-"
+    prefix = f"COOP-{year}-"
     last = Order.objects.filter(code__startswith=prefix).order_by('-code').first()
     if last:
         try:
@@ -27,7 +27,7 @@ class Order(models.Model):
 
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pendiente'),
-        (STATUS_PENDING_PAYMENT, 'Pendiente de Pago'),
+        (STATUS_PENDING_PAYMENT, 'Verificando Pago'),
         (STATUS_PAID, 'Pagado'),
         (STATUS_DELIVERED, 'Entregado'),
         (STATUS_CANCELLED, 'Cancelado'),

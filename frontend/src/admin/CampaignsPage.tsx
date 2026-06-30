@@ -7,8 +7,9 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Campaign | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [form, setForm] = useState({
-    name: '', slug: '', description: '', image: '', color: '#22C55E',
+    name: '', slug: '', description: '', color: '#22C55E',
     start_date: '', end_date: '', is_active: true, status: 'borrador'
   })
 
@@ -21,14 +22,16 @@ export default function CampaignsPage() {
 
   const openNew = () => {
     setEditing(null)
-    setForm({ name: '', slug: '', description: '', image: '', color: '#22C55E', start_date: '', end_date: '', is_active: true, status: 'borrador' })
+    setImageFile(null)
+    setForm({ name: '', slug: '', description: '', color: '#22C55E', start_date: '', end_date: '', is_active: true, status: 'active' })
     setShowModal(true)
   }
 
   const openEdit = (c: Campaign) => {
     setEditing(c)
+    setImageFile(null)
     setForm({
-      name: c.name, slug: c.slug, description: c.description, image: c.image || '',
+      name: c.name, slug: c.slug, description: c.description,
       color: c.color, start_date: c.start_date || '', end_date: c.end_date || '',
       is_active: c.is_active, status: c.status
     })
@@ -37,14 +40,20 @@ export default function CampaignsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const payload = { ...form }
-    if (!payload.slug) {
-      payload.slug = payload.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-    }
+    const fd = new FormData()
+    fd.append('name', form.name)
+    fd.append('slug', form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''))
+    fd.append('description', form.description)
+    fd.append('color', form.color)
+    fd.append('status', form.status)
+    fd.append('is_active', String(form.is_active))
+    if (form.start_date) fd.append('start_date', form.start_date)
+    if (form.end_date) fd.append('end_date', form.end_date)
+    if (imageFile) fd.append('image', imageFile)
     if (editing) {
-      await api.updateCampaign(editing.id, payload)
+      await api.updateCampaign(editing.id, fd)
     } else {
-      await api.createCampaign(payload)
+      await api.createCampaign(fd)
     }
     setShowModal(false)
     load()
@@ -89,8 +98,8 @@ export default function CampaignsPage() {
                     <td className="px-5 py-3 text-gray-500 font-mono text-xs">{c.slug}</td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        c.status === 'activa' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                      }`}>{c.status}</span>
+                        c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      }`}>{c.status === 'draft' ? 'Borrador' : c.status === 'active' ? 'Activa' : c.status === 'finished' ? 'Finalizada' : c.status}</span>
                     </td>
                     <td className="px-5 py-3">
                       <span className={`w-2 h-2 inline-block rounded-full ${c.is_active ? 'bg-green-500' : 'bg-gray-300'}`} />
@@ -131,6 +140,19 @@ export default function CampaignsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                 <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" rows={3} />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Imagen</label>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
+                  onChange={e => setImageFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+                {editing?.image && !imageFile && (
+                  <p className="text-xs text-gray-400 mt-1">Actual: {editing.image.split('/').pop()}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-1">JPG o PNG — Se comprime automáticamente</p>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
@@ -139,9 +161,9 @@ export default function CampaignsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                   <select value={form.status} onChange={e => setForm({...form, status: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none">
-                    <option value="borrador">Borrador</option>
-                    <option value="activa">Activa</option>
-                    <option value="finalizada">Finalizada</option>
+                    <option value="draft">Borrador</option>
+                    <option value="active">Activa</option>
+                    <option value="finished">Finalizada</option>
                   </select>
                 </div>
               </div>

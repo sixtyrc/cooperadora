@@ -14,6 +14,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 from orders.models import Order, OrderItem
 from payments.models import Payment
+from products.models import Product
 
 
 def _parse_date(value):
@@ -71,9 +72,12 @@ def build_dashboard_data(qs):
         for status, _ in Order.STATUS_CHOICES
     }
 
-    latest_orders = qs[:5].values(
-        'code', 'customer_name', 'total', 'status', 'created_at'
-    )
+    latest_orders = list(qs[:5].values(
+        'id', 'code', 'customer_name', 'total', 'status', 'created_at'
+    ))
+    status_map = dict(Order.STATUS_CHOICES)
+    for o in latest_orders:
+        o['status_display'] = status_map.get(o['status'], o['status'])
 
     return {
         'total_orders': qs.count(),
@@ -82,7 +86,7 @@ def build_dashboard_data(qs):
         'pending_amount': _fmt(total_sales - total_collected),
         'pending_deliveries': qs.filter(status=Order.STATUS_PAID).count(),
         'orders_by_status': status_counts,
-        'latest_orders': list(latest_orders),
+        'latest_orders': latest_orders,
     }
 
 
@@ -163,6 +167,79 @@ def build_classroom_report(qs):
         }
         for row in grouped
     ]
+
+
+def build_financial_report(qs):
+    """Reporte financiero: cobros por método, costo, ganancia."""
+    non_cancelled = qs.exclude(status=Order.STATUS_CANCELLED)
+
+    # Cobros por método de pago (solo verificados)
+    verified_payments = Payment.objects.filter(
+        order__in=non_cancelled,
+        status=Payment.STATUS_VERIFIED,
+    )
+
+    cash_total = _to_decimal(
+        verified_payments.filter(method=Payment.METHOD_CASH)
+        .aggregate(total=Coalesce(Sum('order__total'), Decimal('0')))['total']
+    )
+    transfer_total = _to_decimal(
+        verified_payments.filter(method=Payment.METHOD_TRANSFER)
+        .aggregate(total=Coalesce(Sum('order__total'), Decimal('0')))['total']
+    )
+
+    # Costo total y ganancia por producto/campaña
+    items = (
+        OrderItem.objects.filter(order__in=non_cancelled)
+        .select_related('product', 'product__campaign')
+    )
+
+    total_cost = Decimal('0')
+    total_revenue = Decimal('0')
+    campaign_data = {}
+
+    for item in items:
+        product = item.product
+        cost = _to_decimal(product.cost) * item.quantity
+        revenue = _to_decimal(item.subtotal)
+        total_cost += cost
+        total_revenue += revenue
+
+        campaign_name = product.campaign.name
+        if campaign_name not in campaign_data:
+            campaign_data[campaign_name] = {
+                'name': campaign_name,
+                'total_sales': Decimal('0'),
+                'total_cost': Decimal('0'),
+                'quantity_sold': 0,
+            }
+        campaign_data[campaign_name]['total_sales'] += revenue
+        campaign_data[campaign_name]['total_cost'] += cost
+        campaign_data[campaign_name]['quantity_sold'] += item.quantity
+
+    total_profit = total_revenue - total_cost
+    margin = ((total_profit / total_revenue) * 100) if total_revenue > 0 else Decimal('0')
+
+    by_campaign = [
+        {
+            'name': d['name'],
+            'total_sales': _fmt(d['total_sales']),
+            'total_cost': _fmt(d['total_cost']),
+            'total_profit': _fmt(d['total_sales'] - d['total_cost']),
+            'quantity_sold': d['quantity_sold'],
+        }
+        for d in sorted(campaign_data.values(), key=lambda x: x['total_sales'], reverse=True)
+    ]
+
+    return {
+        'total_sales': _fmt(total_revenue),
+        'total_collected_cash': _fmt(cash_total),
+        'total_collected_transfer': _fmt(transfer_total),
+        'total_cost': _fmt(total_cost),
+        'total_profit': _fmt(total_profit),
+        'profit_margin': str(margin.quantize(Decimal('0.1'))),
+        'by_campaign': by_campaign,
+    }
 
 
 def export_excel(data):
