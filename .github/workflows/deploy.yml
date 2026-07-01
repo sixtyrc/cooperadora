@@ -3,7 +3,7 @@ name: 🚀 Deploy a Producción
 on:
   push:
     branches:
-      - production
+      - prod
 
 jobs:
   deploy:
@@ -13,6 +13,11 @@ jobs:
     steps:
       - name: 📥 Obtener último código
         uses: actions/checkout@v4
+
+      - name: 📦 Preparar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: ✅ Validar Backend
         working-directory: ${{ github.workspace }}\backend
@@ -47,7 +52,7 @@ jobs:
         run: |
           Start-Sleep -Seconds 8
           try {
-            $r = Invoke-WebRequest -Uri "http://localhost:8004/api/institution" -UseBasicParsing
+            $r = Invoke-WebRequest -Uri "http://localhost:8004/api/institution" -UseBasicParsing -TimeoutSec 10
             if ($r.StatusCode -eq 200) {
               Write-Host "✅ Servicio OK (HTTP $($r.StatusCode))"
             } else {
