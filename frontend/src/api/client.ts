@@ -25,8 +25,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers: { ...headers, ...options?.headers },
   })
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail || `Error ${res.status}`)
+    const body = await res.json().catch(() => ({})) as Record<string, unknown>
+    const validationMessage = Object.entries(body)
+      .filter(([key]) => key !== 'detail')
+      .flatMap(([key, value]) => {
+        const messages = Array.isArray(value) ? value : [value]
+        return messages.map(message => `${key}: ${String(message)}`)
+      })
+      .join(' · ')
+    throw new Error(String(body.detail || validationMessage || `Error ${res.status}`))
   }
   return res.json()
 }

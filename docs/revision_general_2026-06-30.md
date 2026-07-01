@@ -23,6 +23,7 @@
 - Backoffice de pagos con resumen, filtro y detalle de incidencias de conciliación.
 - Grilla de pagos con monto OCR y vista previa clickeable del comprobante.
 - Servidor Vite preparado para compartir desarrollo mediante port forwarding en el puerto 5173.
+- Alta de usuarios corregida con roles `ADMIN`/`OPERATOR` y errores de validación visibles.
 - Se corrigieron advertencias de hooks de React.
 - Se agregó la migración pendiente de estados de pedidos.
 - CI/CD valida backend y frontend antes de copiar y reiniciar la versión de producción.

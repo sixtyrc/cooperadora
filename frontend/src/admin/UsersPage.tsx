@@ -7,8 +7,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    username: '', password: '', first_name: '', last_name: '', email: '', role: 'operador'
+    username: '', password: '', first_name: '', last_name: '', email: '', role: 'OPERATOR'
   })
 
   const load = () => {
@@ -20,27 +22,37 @@ export default function UsersPage() {
 
   const openNew = () => {
     setEditing(null)
-    setForm({ username: '', password: '', first_name: '', last_name: '', email: '', role: 'operador' })
+    setError('')
+    setForm({ username: '', password: '', first_name: '', last_name: '', email: '', role: 'OPERATOR' })
     setShowModal(true)
   }
 
   const openEdit = (u: User) => {
     setEditing(u)
+    setError('')
     setForm({ username: u.username, password: '', first_name: u.first_name, last_name: u.last_name, email: u.email, role: u.role })
     setShowModal(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editing) {
-      const payload: Record<string, string> = { ...form }
-      if (!payload.password) delete payload.password
-      await api.updateUser(editing.id, payload as Partial<User & { password?: string }>)
-    } else {
-      await api.createUser(form)
+    setSaving(true)
+    setError('')
+    try {
+      if (editing) {
+        const payload: Record<string, string> = { ...form }
+        if (!payload.password) delete payload.password
+        await api.updateUser(editing.id, payload as Partial<User & { password?: string }>)
+      } else {
+        await api.createUser(form)
+      }
+      setShowModal(false)
+      load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar el usuario.')
+    } finally {
+      setSaving(false)
     }
-    setShowModal(false)
-    load()
   }
 
   const handleDelete = async (id: number) => {
@@ -134,13 +146,16 @@ export default function UsersPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
                 <select value={form.role} onChange={e => setForm({...form, role: e.target.value})} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none">
-                  <option value="admin">Admin</option>
-                  <option value="operador">Operador</option>
+                  <option value="ADMIN">Administrador</option>
+                  <option value="OPERATOR">Operador</option>
                 </select>
               </div>
+              {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold transition-colors">{editing ? 'Guardar' : 'Crear'}</button>
+                <button type="submit" disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold transition-colors disabled:opacity-50">
+                  {saving ? 'Guardando...' : editing ? 'Guardar' : 'Crear'}
+                </button>
               </div>
             </form>
           </div>
