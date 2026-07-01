@@ -44,14 +44,39 @@ jobs:
       - name: 🚀 Publicar versión validada
         shell: powershell
         run: |
-          robocopy "${{ github.workspace }}\backend" "C:\www\cooperadora\backend" /MIR /R:3 /W:5 /XD venv media staticfiles __pycache__ /XF .env
-          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
-          robocopy "${{ github.workspace }}\frontend" "C:\www\cooperadora\frontend" /MIR /R:3 /W:5 /XD node_modules
-          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
+          $ErrorActionPreference = "Stop"
+          $deployRoot = "C:\www\cooperadora"
+          $runnerIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+          Write-Host "Deploy ejecutado como: $runnerIdentity"
+
+          $permissionProbe = Join-Path $deployRoot ".actions-write-test-$PID"
+          try {
+            [System.IO.File]::WriteAllText($permissionProbe, "ok")
+            Remove-Item -LiteralPath $permissionProbe -Force
+          } catch {
+            throw "La cuenta '$runnerIdentity' no puede escribir en '$deployRoot'. Conceda permisos NTFS al usuario del servicio GitHub Actions Runner. Detalle: $($_.Exception.Message)"
+          }
+
+          function Invoke-CheckedRobocopy {
+            param([string]$Source, [string]$Destination, [string[]]$ExtraArgs)
+            & robocopy $Source $Destination /MIR /R:3 /W:5 @ExtraArgs
+            $robocopyExitCode = $LASTEXITCODE
+            if ($robocopyExitCode -ge 8) {
+              throw "Robocopy falló al copiar '$Source' a '$Destination' (código $robocopyExitCode)."
+            }
+          }
+
+          Invoke-CheckedRobocopy "${{ github.workspace }}\backend" "$deployRoot\backend" @("/XD", "venv", "media", "staticfiles", "__pycache__", "/XF", ".env")
+          Invoke-CheckedRobocopy "${{ github.workspace }}\frontend" "$deployRoot\frontend" @("/XD", "node_modules")
           Set-Location C:\www\cooperadora\backend
-          .\venv\Scripts\python.exe manage.py migrate --noinput
-          .\venv\Scripts\python.exe manage.py collectstatic --noinput
-          nssm restart cooperadora-backend
+          & .\venv\Scripts\python.exe manage.py migrate --noinput
+          if ($LASTEXITCODE -ne 0) { throw "Fallaron las migraciones de Django." }
+          & .\venv\Scripts\python.exe manage.py collectstatic --noinput
+          if ($LASTEXITCODE -ne 0) { throw "Falló collectstatic." }
+          & nssm restart cooperadora-backend
+          if ($LASTEXITCODE -ne 0) {
+            throw "La cuenta '$runnerIdentity' no tiene permiso para reiniciar el servicio 'cooperadora-backend'. Configure el runner con una cuenta autorizada."
+          }
 
       - name: ✅ Health Check
         shell: powershell

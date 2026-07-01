@@ -314,6 +314,40 @@ contraseña en comandos ni en el repositorio.
 Robocopy está limitado a 3 reintentos de 5 segundos para que un error de
 permisos no deje el deploy esperando indefinidamente.
 
+### Incidente de permisos resuelto — 2026-07-01
+
+El deploy fallaba con `Robocopy ERROR 5: Access is denied` y
+`OpenService(): Access is denied`. La causa era que el servicio GitHub Actions
+Runner se ejecutaba como `NT AUTHORITY\NETWORK SERVICE`, sin permisos para
+escribir en `C:\www\cooperadora` ni reiniciar `cooperadora-backend`.
+
+La solución aplicada fue abrir `services.msc`, buscar **GitHub Actions Runner
+(sixtyrc-cooperadora...)**, entrar en **Propiedades → Iniciar sesión** y cambiar
+la cuenta a **Cuenta del sistema local (LocalSystem)**. Luego se aplicaron los
+cambios y se reinició el servicio.
+
+Estado confirmado:
+
+```text
+Name:      actions.runner.sixtyrc-cooperadora.WIN-R3CTAT28AUO
+StartName: LocalSystem
+State:     Running
+```
+
+Verificación:
+
+```powershell
+Get-CimInstance Win32_Service |
+  Where-Object Name -Like "actions.runner*" |
+  Select-Object Name, StartName, State
+```
+
+El workflow debería informar
+`Deploy ejecutado como: NT AUTHORITY\SYSTEM`. `LocalSystem` permite desplegar,
+pero posee privilegios elevados. A futuro puede reemplazarse por una cuenta
+dedicada con permisos de modificación sobre `C:\www\cooperadora` y autorización
+para reiniciar únicamente `cooperadora-backend`.
+
 ---
 
 ## 11. Deploy automático
