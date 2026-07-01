@@ -44,9 +44,9 @@ jobs:
       - name: 🚀 Publicar versión validada
         shell: powershell
         run: |
-          robocopy "${{ github.workspace }}\backend" "C:\www\cooperadora\backend" /MIR /XD venv media staticfiles __pycache__ /XF .env
+          robocopy "${{ github.workspace }}\backend" "C:\www\cooperadora\backend" /MIR /R:3 /W:5 /XD venv media staticfiles __pycache__ /XF .env
           if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
-          robocopy "${{ github.workspace }}\frontend" "C:\www\cooperadora\frontend" /MIR /XD node_modules
+          robocopy "${{ github.workspace }}\frontend" "C:\www\cooperadora\frontend" /MIR /R:3 /W:5 /XD node_modules
           if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
           Set-Location C:\www\cooperadora\backend
           .\venv\Scripts\python.exe manage.py migrate --noinput

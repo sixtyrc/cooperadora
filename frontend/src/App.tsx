@@ -19,10 +19,12 @@ import SettingsPage from './admin/SettingsPage'
 import UsersPage from './admin/UsersPage'
 import AuditPage from './admin/AuditPage'
 import HelpPage from './admin/HelpPage'
+import PWAStatus from './components/PWAStatus'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <PWAStatus />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />

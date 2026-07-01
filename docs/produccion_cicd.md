@@ -295,16 +295,24 @@ New-Item C:\actions-runner\cooperadora -ItemType Directory -Force
 cd C:\actions-runner\cooperadora
 ```
 
-Ejecutar los comandos de descarga y configuración que muestra GitHub. Para
-instalarlo como servicio en Windows:
+Ejecutar los comandos de descarga y configuración que muestra GitHub. Cuando
+pregunte si debe ejecutarse como servicio, responder que sí. Esta versión del
+runner instala e inicia el servicio desde `config.cmd`; no incluye `svc.cmd`.
+Verificarlo con:
 
 ```powershell
-.\svc.cmd install
-.\svc.cmd start
-.\svc.cmd status
+Get-Service "actions.runner*"
 ```
 
-No usar `svc.sh`; ese comando corresponde a Linux.
+El runner necesita escribir en `C:\www\cooperadora` y reiniciar NSSM. Si fue
+instalado con la cuenta predeterminada `NETWORK SERVICE`, abrir `services.msc`,
+buscar **GitHub Actions Runner (sixtyrc-cooperadora...)**, entrar en
+**Propiedades → Iniciar sesión**, seleccionar **Esta cuenta** y usar la cuenta
+administradora del servidor. Aplicar y reiniciar el servicio. No guardar esa
+contraseña en comandos ni en el repositorio.
+
+Robocopy está limitado a 3 reintentos de 5 segundos para que un error de
+permisos no deje el deploy esperando indefinidamente.
 
 ---
 
