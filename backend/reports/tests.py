@@ -196,7 +196,7 @@ class FilterTests(ReportsBaseTestCase):
 
     def test_filter_by_date_range(self):
         self._login(self.admin)
-        today = timezone.now().strftime('%Y-%m-%d')
+        today = timezone.localdate().strftime('%Y-%m-%d')
         resp = self.client.get(f'/api/reports/dashboard?date_from={today}&date_to={today}')
         data = resp.json()
         self.assertEqual(data['total_orders'], 1)

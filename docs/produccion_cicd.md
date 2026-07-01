@@ -321,6 +321,9 @@ El workflow `.github/workflows/deploy.yml` se ejecuta con cada push a `prod`:
 7. Reinicia `cooperadora-backend`.
 8. Verifica `http://localhost:8004/api/institution`.
 
+Los tests del runner usan SQLite en memoria. No leen `.env`, no requieren el
+puerto PostgreSQL del servidor y nunca modifican la base de producción.
+
 Flujo recomendado desde desarrollo:
 
 ```powershell

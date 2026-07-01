@@ -22,6 +22,12 @@ jobs:
       - name: ✅ Validar Backend
         working-directory: ${{ github.workspace }}\backend
         shell: powershell
+        env:
+          SECRET_KEY: ci-temporary-secret-key-not-used-in-production
+          DEBUG: "False"
+          DATABASE_URL: "sqlite:///:memory:"
+          SECURE_SSL_REDIRECT: "False"
+          ALLOWED_HOSTS: "localhost,127.0.0.1"
         run: |
           C:\www\cooperadora\backend\venv\Scripts\python.exe -m pip install -r requirements.txt --quiet
           C:\www\cooperadora\backend\venv\Scripts\python.exe manage.py check

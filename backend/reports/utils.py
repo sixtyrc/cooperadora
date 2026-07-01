@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from io import BytesIO
 
@@ -38,9 +38,9 @@ def get_filtered_orders(request):
     if campaign_slug:
         qs = qs.filter(campaign__slug=campaign_slug)
     if date_from:
-        qs = qs.filter(created_at__date__gte=date_from.date())
+        qs = qs.filter(created_at__gte=date_from)
     if date_to:
-        qs = qs.filter(created_at__date__lte=date_to.date())
+        qs = qs.filter(created_at__lt=date_to + timedelta(days=1))
     if status in dict(Order.STATUS_CHOICES):
         qs = qs.filter(status=status)
 
